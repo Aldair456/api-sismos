@@ -1,0 +1,41 @@
+service: api-web-scraping
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::044217340511:role/LabRole  # Asegúrate de que este rol tenga permisos para DynamoDB y Lambda
+
+  environment:
+    DYNAMODB_TABLE: EarthquakesTable  # Variable de entorno para el nombre de la tabla
+
+functions:
+  scrape_earthquakes:
+    handler: scraping.lambda_handler  # Nombre del archivo y función en tu código Python
+    package:
+      include:
+        - ./**  # Incluir todo el contenido del directorio
+    events:
+      - http:
+          path: /scrape/earthquakes
+          method: get
+          cors: true
+          integration: lambda
+
+resources:
+  Resources:
+    EarthquakesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
